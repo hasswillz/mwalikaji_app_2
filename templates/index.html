@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EventPulse - Premier Event Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; background-color: #020617; color: #f8fafc; overflow-x: hidden; }
+        .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
+        .animate-slide-in { animation: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes slide-in { from { transform: translateY(15px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* Custom animations for the portal */
+        .fade-in { animation: fadeIn 1s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div id="root"></div>
+
+    {% raw %}
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const API_URL = `http://mwalikaji.com`;
+
+        const API = {
+            get: (url) => fetch(`${API_URL}${url}`).then(r => r.json()),
+            post: (url, body) => fetch(`${API_URL}${url}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) }).then(r => r.json()),
+            put: (url, body) => fetch(`${API_URL}${url}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) }).then(r => r.json()),
+            postForm: (url, formData) => fetch(`${API_URL}${url}`, { method: 'POST', body: formData }).then(r => r.json()),
+            putForm: (url, formData) => fetch(`${API_URL}${url}`, { method: 'PUT', body: formData }).then(r => r.json()),
+            delete: (url) => fetch(`${API_URL}${url}`, { method: 'DELETE' }).then(r => r.json())
+        };
+
+        const Icon = ({ name, className }) => {
+            const ref = useRef(null);
+            useEffect(() => { if (ref.current) lucide.createIcons({ nodes: [ref.current] }); }, [name]);
+            return <i ref={ref} data-lucide={name} className={className}></i>;
+        };
+
+        // ==========================================
+        // 1. PUBLIC CUSTOMER PORTAL COMPONENT
+        // ==========================================
+        function PublicPortal({ onLoginClick }) {
+            const [stats, setStats] = useState({ events: 0, guests: 0, checked_in: 0 });
+            const [currentSlide, setCurrentSlide] = useState(0);
+
+            useEffect(() => {
+                API.get('/api/public_stats').then(setStats);
+                // Auto-advance slides
+                const timer = setInterval(() => setCurrentSlide(p => (p + 1) % 3), 5000);
+                return () => clearInterval(timer);
+            }, []);
+
+            const slides = [
+                { title: "Seamless Event Check-In", desc: "Scan QR passes instantly with our high-speed live camera scanner.", bg: "from-indigo-900 to-slate-900" },
+                { title: "Smart WhatsApp & SMS Invites", desc: "Automate guest invitations, reminders, and RSVPs directly to their phones.", bg: "from-emerald-900 to-slate-900" },
+                { title: "Beautiful Digital Passes", desc: "Create custom, branded E-cards and gate passes in seconds.", bg: "from-pink-900 to-slate-900" }
+            ];
+
+            return (
+                <div className="min-h-screen flex flex-col bg-slate-950">
+                    {/* Portal Navigation */}
+                    <header className="absolute top-0 w-full z-50 px-6 py-6 flex justify-between items-center bg-gradient-to-b from-slate-950 to-transparent">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-indigo-600 p-2 rounded-xl shadow-lg"><Icon name="sparkles" className="w-6 h-6 text-white"/></div>
+                            <span className="font-black text-2xl tracking-tight text-white">EventPulse</span>
+                        </div>
+                        <nav className="hidden md:flex gap-8 text-sm font-bold text-slate-300">
+                            <a href="#services" className="hover:text-white transition-colors">Services</a>
+                            <a href="#events" className="hover:text-white transition-colors">Live Events</a>
+                            <a href="#about" className="hover:text-white transition-colors">Why Us</a>
+                        </nav>
+                        <button onClick={onLoginClick} className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg flex items-center gap-2">
+                            <Icon name="lock" className="w-4 h-4"/> Client Login
+                        </button>
+                    </header>
+
+                    {/* Hero Section */}
+                    <section className="relative h-[80vh] flex items-center justify-center overflow-hidden">
+                        {slides.map((slide, idx) => (
+                            <div key={idx} className={`absolute inset-0 bg-gradient-to-br ${slide.bg} transition-opacity duration-1000 ${idx === currentSlide ? 'opacity-100' : 'opacity-0'} flex flex-col items-center justify-center text-center px-4`}>
+                                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
+                                <h1 className="text-5xl md:text-7xl font-black text-white mb-6 max-w-4xl leading-tight relative z-10">{slide.title}</h1>
+                                <p className="text-lg md:text-xl text-slate-300 max-w-2xl mb-10 relative z-10">{slide.desc}</p>
+                                <button onClick={onLoginClick} className="bg-white text-slate-900 px-8 py-4 rounded-2xl font-black text-lg hover:scale-105 transition-transform shadow-2xl relative z-10">
+                                    Access Your Dashboard
+                                </button>
+                            </div>
+                        ))}
+
+                        {/* Slide Indicators */}
+                        <div className="absolute bottom-10 flex gap-3 z-20">
+                            {slides.map((_, idx) => (
+                                <button key={idx} onClick={() => setCurrentSlide(idx)} className={`h-2 rounded-full transition-all ${idx === currentSlide ? 'w-10 bg-indigo-500' : 'w-2 bg-slate-600'}`} />
+                            ))}
+                        </div>
+                    </section>
+
+                    {/* Stats Section */}
+                    <section id="about" className="py-20 bg-slate-900 border-y border-slate-800 relative z-20">
+                        <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                            <div className="p-8">
+                                <div className="text-5xl font-black text-indigo-400 mb-2">{stats.events}+</div>
+                                <div className="text-slate-400 font-bold uppercase tracking-wider">Events Hosted</div>
+                            </div>
+                            <div className="p-8 border-y md:border-y-0 md:border-x border-slate-800">
+                                <div className="text-5xl font-black text-emerald-400 mb-2">{stats.guests}+</div>
+                                <div className="text-slate-400 font-bold uppercase tracking-wider">Guests Managed</div>
+                            </div>
+                            <div className="p-8">
+                                <div className="text-5xl font-black text-pink-400 mb-2">{stats.checked_in}+</div>
+                                <div className="text-slate-400 font-bold uppercase tracking-wider">Passes Scanned</div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Service Packages */}
+                    <section id="services" className="py-24 bg-slate-950">
+                        <div className="max-w-6xl mx-auto px-6">
+                            <div className="text-center mb-16">
+                                <h2 className="text-4xl font-black text-white mb-4">Service Packages</h2>
+                                <p className="text-slate-400">Choose the perfect plan for your next corporate event, wedding, or conference.</p>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                {/* Basic Plan */}
+                                <div className="glass p-8 rounded-3xl border border-slate-800 hover:border-indigo-500 transition-colors">
+                                    <h3 className="text-xl font-bold text-white mb-2">Basic Entry</h3>
+                                    <div className="text-4xl font-black text-indigo-400 mb-6">Free</div>
+                                    <ul className="space-y-3 text-sm text-slate-300 mb-8">
+                                        <li className="flex items-center gap-2"><Icon name="check" className="w-4 h-4 text-emerald-400"/> Up to 50 Guests</li>
+                                        <li className="flex items-center gap-2"><Icon name="check" className="w-4 h-4 text-emerald-400"/> Manual Guest Entry</li>
+                                        <li className="flex items-center gap-2"><Icon name="check" className="w-4 h-4 text-emerald-400"/> Basic QR Scanner</li>
+                                    </ul>
+                                    <button onClick={onLoginClick} className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold hover:bg-slate-700">Get Started</button>
+                                </div>
+                                {/* Pro Plan */}
+                                <div className="glass p-8 rounded-3xl border-2 border-indigo-500 relative shadow-2xl shadow-indigo-500/20 transform md:-translate-y-4">
+                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-indigo-500 text-white px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider">Most Popular</div>
+                                    <h3 className="text-xl font-bold text-white mb-2">Pro Event</h3>
+                                    <div className="text-4xl font-black text-indigo-400 mb-6">$99<span className="text-sm text-slate-400 font-normal">/event</span></div>
+                                    <ul className="space-y-3 text-sm text-slate-300 mb-8">
+                                        <li className="flex items-center gap-2"><Icon name="check" className="w-4 h-4 text-emerald-400"/> Unlimited Guests</li>
+                                        <li className="flex items-center gap-2"><Icon name="check" className="w-4 h-4 text-emerald-400"/> WhatsApp & SMS Invites</li>
+                                        <li className="flex items-center gap-2"><Icon name="check" className="w-4 h-4 text-emerald-400"/> Custom E-Card Generator</li>
+                                        <li className="flex items-center gap-2"><Icon name="check" className="w-4 h-4 text-emerald-400"/> Live Camera Scanning</li>
+                                    </ul>
+                                    <button onClick={onLoginClick} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-500 shadow-lg shadow-indigo-600/30">Upgrade to Pro</button>
+                                </div>
+                                {/* Enterprise Plan */}
+                                <div className="glass p-8 rounded-3xl border border-slate-800 hover:border-indigo-500 transition-colors">
+                                    <h3 className="text-xl font-bold text-white mb-2">Enterprise</h3>
+                                    <div className="text-4xl font-black text-indigo-400 mb-6">Custom</div>
+                                    <ul className="space-y-3 text-sm text-slate-300 mb-8">
+                                        <li className="flex items-center gap-2"><Icon name="check" className="w-4 h-4 text-emerald-400"/> Multi-Event Management</li>
+                                        <li className="flex items-center gap-2"><Icon name="check" className="w-4 h-4 text-emerald-400"/> Dedicated Verifier Accounts</li>
+                                        <li className="flex items-center gap-2"><Icon name="check" className="w-4 h-4 text-emerald-400"/> Custom API Integration</li>
+                                    </ul>
+                                    <button onClick={onLoginClick} className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold hover:bg-slate-700">Contact Sales</button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Footer */}
+                    <footer className="py-8 bg-slate-950 border-t border-slate-900 text-center text-slate-500 text-sm">
+                        <p>&copy; 2026 EventPulse Pro. All rights reserved.</p>
+                    </footer>
+                </div>
+            );
+        }
+
+        // ==========================================
+        // 2. MAIN APP & LOGIN COMPONENT
+        // ==========================================
+        function App() {
+            const [view, setView] = useState('portal'); // 'portal' or 'login' or 'dashboard'
+            const [user, setUser] = useState(null);
+            const [events, setEvents] = useState([]);
+            const [users, setUsers] = useState([]);
+            const [selectedEvent, setSelectedEvent] = useState(null);
+            const [guests, setGuests] = useState([]);
+            const [tab, setTab] = useState('dashboard');
+            const [toast, setToast] = useState(null);
+
+            // Auth State
+            const [email, setEmail] = useState('admin@eventpulse.com');
+            const [password, setPassword] = useState('admin123');
+
+            // Modals State
+            const [showEventModal, setShowEventModal] = useState(false);
+            const [editEventId, setEditEventId] = useState(null);
+            const [showGuestModal, setShowGuestModal] = useState(false);
+            const [editGuestId, setEditGuestId] = useState(null);
+            const [showImportModal, setShowImportModal] = useState(false);
+            const [showUserModal, setShowUserModal] = useState(false);
+
+            // Composer Modal State
+            const [showComposerModal, setShowComposerModal] = useState(false);
+            const [composerType, setComposerType] = useState('invite');
+            const [draftMessage, setDraftMessage] = useState('');
+
+            // Forms
+            const [newEvent, setNewEvent] = useState({ title: '', date: '', time: '', location: '', hall: '', host: '', event_type: 'Conference' });
+            const [eventImage, setEventImage] = useState(null);
+            const [newGuest, setNewGuest] = useState({ name: '', phone: '', channel: 'whatsapp' });
+            const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'admin' });
+
+            // Dispatch Selection
+            const [selectedGuests, setSelectedGuests] = useState([]);
+
+            // Scanner
+            const [scannerActive, setScannerActive] = useState(false);
+            const [scanResult, setScanResult] = useState(null);
+            const html5QrCodeRef = useRef(null);
+
+            const showMsg = (text, type='success') => {
+                setToast({ text, type });
+                setTimeout(() => setToast(null), 3000);
+            };
+
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                const res = await API.post('/api/login', { email, password });
+                if (res.success) {
+                    setUser(res.user);
+                    setView('dashboard');
+                    setTab(res.user.role === 'admin' ? 'dashboard' : 'scanner');
+                    showMsg(`Welcome, ${res.user.name}`);
+                } else { showMsg(res.message, 'error'); }
+            };
+
+            const handleLogout = () => {
+                setUser(null);
+                setView('portal');
+            };
+
+            const loadData = async () => {
+                if (!user) return;
+                const evts = await API.get('/api/events');
+                setEvents(evts);
+                if (evts.length > 0 && !selectedEvent) setSelectedEvent(evts[0]);
+                else if (evts.length === 0) setSelectedEvent(null);
+
+                if (user.email === 'admin@eventpulse.com') {
+                    const usrs = await API.get('/api/users');
+                    setUsers(usrs);
+                }
+            };
+
+            useEffect(() => { loadData(); }, [user]);
+            useEffect(() => {
+                if (selectedEvent) API.get(`/api/guests/${selectedEvent.id}`).then(setGuests);
+                else setGuests([]);
+                setSelectedGuests([]);
+            }, [selectedEvent]);
+
+            // --- USER MANAGEMENT ---
+            const handleCreateUser = async (e) => {
+                e.preventDefault();
+                const res = await API.post('/api/users', newUser);
+                if (res.success) {
+                    showMsg('Account Created Successfully!');
+                    setShowUserModal(false);
+                    setNewUser({ name: '', email: '', password: '', role: 'admin' });
+                    loadData();
+                } else {
+                    showMsg(res.message, 'error');
+                }
+            };
+
+            // --- EVENT CRUD ---
+            const handleSaveEvent = async (e) => {
+                e.preventDefault();
+                const formData = new FormData();
+                Object.keys(newEvent).forEach(key => formData.append(key, newEvent[key]));
+                if (eventImage) formData.append('invite_image', eventImage);
+
+                if (editEventId) {
+                    await API.putForm(`/api/events/${editEventId}`, formData);
+                    showMsg('Event Updated!');
+                } else {
+                    await API.postForm('/api/events', formData);
+                    showMsg('Event Created!');
+                }
+
+                await loadData();
+                setShowEventModal(false);
+                setEditEventId(null);
+                setNewEvent({ title: '', date: '', time: '', location: '', hall: '', host: '', event_type: 'Conference' });
+                setEventImage(null);
+            };
+
+            const handleEditClick = (e, evt) => {
+                e.stopPropagation();
+                setEditEventId(evt.id);
+                setNewEvent({ title: evt.title, date: evt.date, time: evt.time, location: evt.location, hall: evt.hall || '', host: evt.host, event_type: evt.event_type });
+                setEventImage(null);
+                setShowEventModal(true);
+            };
+
+            const handleDeleteEvent = async (e, evtId) => {
+                e.stopPropagation();
+                if(window.confirm("Delete event and all guests?")) {
+                    await API.delete(`/api/events/${evtId}`);
+                    showMsg('Event Deleted');
+                    if (selectedEvent?.id === evtId) setSelectedEvent(null);
+                    loadData();
+                }
+            };
+
+            // --- GUEST CRUD ---
+            const handleSaveGuest = async (e) => {
+                e.preventDefault();
+                if (editGuestId) {
+                    await API.put(`/api/guests/single/${editGuestId}`, newGuest);
+                    showMsg('Guest Updated!');
+                } else {
+                    await API.post(`/api/guests/${selectedEvent.id}`, newGuest);
+                    showMsg('Guest Added!');
+                }
+                setShowGuestModal(false);
+                setEditGuestId(null);
+                setNewGuest({ name: '', phone: '', channel: 'whatsapp' });
+                API.get(`/api/guests/${selectedEvent.id}`).then(setGuests);
+            };
+
+            const handleEditGuest = (guest) => {
+                setEditGuestId(guest.id);
+                setNewGuest({ name: guest.name, phone: guest.phone, channel: guest.channel });
+                setShowGuestModal(true);
+            };
+
+            const handleDeleteGuest = async (guestId) => {
+                if(window.confirm("Delete this guest?")) {
+                    await API.delete(`/api/guests/single/${guestId}`);
+                    showMsg('Guest Deleted');
+                    API.get(`/api/guests/${selectedEvent.id}`).then(setGuests);
+                }
+            };
+
+            // --- DISPATCH ---
+            const toggleGuestSelection = (id) => {
+                setSelectedGuests(prev => prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id]);
+            };
+
+            const toggleSelectAll = () => {
+                if (selectedGuests.length === guests.length) setSelectedGuests([]);
+                else setSelectedGuests(guests.map(g => g.id));
+            };
+
+            const openComposer = (type) => {
+                if (selectedGuests.length === 0) return showMsg("Select guests first.", "error");
+                setComposerType(type);
+                if (type === 'invite') {
+                    setDraftMessage(`🎉 You are invited to {event_title}!\n\nDear {name},\nJoin us on {date} at {time}.\n📍 {location}\n\nYour Pass Code: {hash}\nReply YES to confirm.`);
+                } else {
+                    setDraftMessage(`🔔 Reminder: {event_title}\n\nHi {name}, this is a reminder for the event on {date} at {location}.\n\nPass Code: {hash}`);
+                }
+                setShowComposerModal(true);
+            };
+
+            const handleSendDispatch = async () => {
+                const res = await API.post('/api/dispatch', {
+                    guest_ids: selectedGuests,
+                    event_id: selectedEvent.id,
+                    type: composerType,
+                    custom_message: draftMessage
+                });
+                if(res.success) {
+                    showMsg(res.message);
+                    setSelectedGuests([]);
+                    setShowComposerModal(false);
+                    API.get(`/api/guests/${selectedEvent.id}`).then(setGuests);
+                }
+            };
+
+            // --- SCANNER ---
+            useEffect(() => {
+                if (scannerActive) {
+                    const html5QrCode = new Html5Qrcode("qr-reader");
+                    html5QrCodeRef.current = html5QrCode;
+                    html5QrCode.start(
+                        { facingMode: "environment" },
+                        { fps: 10, qrbox: { width: 250, height: 250 } },
+                        (decodedText) => {
+                            handleCheckIn(decodedText);
+                            html5QrCode.stop();
+                            setScannerActive(false);
+                        },
+                        () => {}
+                    ).catch(err => {
+                        showMsg("Camera error. Please check permissions.", "error");
+                        setScannerActive(false);
+                    });
+                    return () => { if (html5QrCode.isScanning) html5QrCode.stop(); };
+                }
+            }, [scannerActive]);
+
+            const handleCheckIn = async (hash) => {
+                const res = await API.post('/api/checkin', { ticket_hash: hash });
+                if (res.success) {
+                    setScanResult({ success: true, guest: res.guest });
+                    showMsg(`Checked in: ${res.guest.name}`, 'success');
+                    if(selectedEvent) API.get(`/api/guests/${selectedEvent.id}`).then(setGuests);
+                } else {
+                    setScanResult({ success: false, message: res.message });
+                    showMsg(res.message, 'error');
+                }
+            };
+
+            // ==========================================
+            // RENDER VIEWS
+            // ==========================================
+
+            // 1. PUBLIC PORTAL
+            if (view === 'portal') {
+                return <PublicPortal onLoginClick={() => setView('login')} />;
+            }
+
+            // 2. LOGIN SCREEN
+            if (view === 'login') {
+                return (
+                    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-slate-900 relative">
+                        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-20"></div>
+
+                        <button onClick={() => setView('portal')} className="absolute top-8 left-8 text-slate-400 hover:text-white flex items-center gap-2 font-bold z-10">
+                            <Icon name="arrow-left" className="w-4 h-4"/> Back to Portal
+                        </button>
+
+                        <div className="glass p-10 rounded-3xl w-full max-w-md shadow-2xl relative z-10">
+                            <div className="text-center mb-8">
+                                <div className="bg-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/30">
+                                    <Icon name="lock" className="w-8 h-8 text-white"/>
+                                </div>
+                                <h1 className="text-3xl font-black text-white">Client Login</h1>
+                                <p className="text-slate-400 text-sm mt-2">Access your admin dashboard</p>
+                            </div>
+
+                            <form onSubmit={handleLogin} className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Email</label>
+                                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-slate-800/50 p-4 rounded-xl border border-slate-700 outline-none text-white focus:border-indigo-500" />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Password</label>
+                                    <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-800/50 p-4 rounded-xl border border-slate-700 outline-none text-white focus:border-indigo-500" />
+                                </div>
+                                <button type="submit" className="w-full bg-indigo-600 py-4 rounded-xl font-black text-lg hover:bg-indigo-500 transition-all shadow-lg mt-4">Sign In</button>
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
+
+            // 3. MAIN DASHBOARD (If logged in)
+            const isSuperAdmin = user?.email === 'admin@eventpulse.com';
+
+            return (
+                <div className="min-h-screen flex flex-col bg-slate-950">
+                    {toast && (
+                        <div className={`fixed top-6 right-6 z-50 px-6 py-3 rounded-xl font-bold shadow-2xl ${toast.type==='success'?'bg-emerald-500':'bg-rose-500'}`}>
+                            {toast.text}
+                        </div>
+                    )}
+
+                    <header className="glass px-6 py-4 flex justify-between items-center border-b border-white/5">
+                        <span className="font-black text-xl text-white cursor-pointer" onClick={() => setView('portal')}>
+                            EventPulse {isSuperAdmin && <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-1 rounded ml-2">SUPER ADMIN</span>}
+                        </span>
+                        <button onClick={handleLogout} className="text-rose-400 font-bold flex items-center gap-2 hover:text-rose-300">
+                            <Icon name="log-out" className="w-4 h-4"/> Logout
+                        </button>
+                    </header>
+
+                    <nav className="glass px-6 py-2 flex gap-2 border-b border-white/5 overflow-x-auto">
+                        {user.role === 'admin' && (
+                            <>
+                                <button onClick={() => setTab('dashboard')} className={`px-5 py-2.5 rounded-xl font-bold whitespace-nowrap ${tab==='dashboard'?'bg-indigo-600 text-white':'text-slate-400'}`}>Dashboard</button>
+                                <button onClick={() => setTab('events')} className={`px-5 py-2.5 rounded-xl font-bold whitespace-nowrap ${tab==='events'?'bg-indigo-600 text-white':'text-slate-400'}`}>Events</button>
+                                <button onClick={() => setTab('guests')} className={`px-5 py-2.5 rounded-xl font-bold whitespace-nowrap ${tab==='guests'?'bg-indigo-600 text-white':'text-slate-400'}`}>Guests</button>
+                                <button onClick={() => setTab('dispatch')} className={`px-5 py-2.5 rounded-xl font-bold whitespace-nowrap ${tab==='dispatch'?'bg-indigo-600 text-white':'text-slate-400'}`}>Dispatch Center</button>
+                                {isSuperAdmin && (
+                                    <button onClick={() => setTab('users')} className={`px-5 py-2.5 rounded-xl font-bold whitespace-nowrap ${tab==='users'?'bg-amber-600 text-white':'text-amber-400'}`}>Manage Users</button>
+                                )}
+                            </>
+                        )}
+                        <button onClick={() => setTab('scanner')} className={`px-5 py-2.5 rounded-xl font-bold whitespace-nowrap ${tab==='scanner'?'bg-emerald-600 text-white':'text-slate-400'}`}>Live Scanner</button>
+                    </nav>
+
+                    <main className="flex-1 p-6 max-w-7xl mx-auto w-full">
+                        {/* DASHBOARD, EVENTS, GUESTS, DISPATCH, SCANNER TABS ... (same as previous) */}
+
+                        {tab === 'dashboard' && (
+                            <div className="space-y-6">
+                                <div className="flex justify-between items-center">
+                                    <h2 className="text-3xl font-black">Overview</h2>
+                                    <button onClick={() => { setEditEventId(null); setShowEventModal(true); }} className="bg-indigo-600 px-5 py-2.5 rounded-xl font-bold">+ Create Event</button>
+                                </div>
+                                {selectedEvent && (
+                                    <div className="glass p-8 rounded-3xl flex gap-6 items-center">
+                                        <div className="flex-1">
+                                            <h3 className="text-2xl font-black">{selectedEvent.title}</h3>
+                                            <p className="text-slate-400 mt-2">{selectedEvent.date} • {selectedEvent.location}</p>
+                                        </div>
+                                        {selectedEvent.invite_image && <img src={`${API_URL}${selectedEvent.invite_image}`} className="w-32 h-32 object-cover rounded-xl shadow-lg" />}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {tab === 'events' && (
+                            <div className="space-y-6">
+                                <h2 className="text-3xl font-black">Events</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {events.map(e => (
+                                        <div key={e.id} onClick={() => { setSelectedEvent(e); setTab('guests'); }} className="glass p-5 rounded-3xl cursor-pointer hover:border-indigo-500 border border-transparent transition-all group relative">
+                                            <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100">
+                                                <button onClick={(ev) => handleEditClick(ev, e)} className="p-2 bg-slate-800 rounded-lg text-indigo-400"><Icon name="edit-3" className="w-4 h-4"/></button>
+                                                <button onClick={(ev) => handleDeleteEvent(ev, e.id)} className="p-2 bg-slate-800 rounded-lg text-rose-400"><Icon name="trash-2" className="w-4 h-4"/></button>
+                                            </div>
+                                            {e.invite_image && <img src={`${API_URL}${e.invite_image}`} className="w-full h-32 object-cover rounded-xl mb-4" />}
+                                            <span className="text-[10px] font-black uppercase text-indigo-400">{e.event_type}</span>
+                                            <h3 className="text-xl font-bold mt-1 mb-2">{e.title}</h3>
+                                            <p className="text-sm text-slate-400">{e.date} • {e.location}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {tab === 'guests' && selectedEvent && (
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <h2 className="text-3xl font-black">Guests</h2>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setShowImportModal(true)} className="bg-emerald-600 px-4 py-2 rounded-xl font-bold flex items-center gap-2"><Icon name="file-spreadsheet" className="w-4 h-4"/> Import</button>
+                                        <button onClick={() => { setEditGuestId(null); setNewGuest({name:'', phone:'', channel:'whatsapp'}); setShowGuestModal(true); }} className="bg-indigo-600 px-4 py-2 rounded-xl font-bold flex items-center gap-2"><Icon name="user-plus" className="w-4 h-4"/> Add</button>
+                                    </div>
+                                </div>
+                                <div className="glass rounded-2xl overflow-hidden">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-slate-800/50 text-slate-400 text-xs uppercase">
+                                            <tr><th className="p-4">Name</th><th className="p-4">Phone</th><th className="p-4">Status</th><th className="p-4 text-right">Actions</th></tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-800">
+                                            {guests.map(g => (
+                                                <tr key={g.id}>
+                                                    <td className="p-4 font-bold">{g.name}</td>
+                                                    <td className="p-4">{g.phone}</td>
+                                                    <td className="p-4"><span className={`px-2 py-1 rounded text-xs font-bold ${g.status === 'Accepted' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>{g.status}</span></td>
+                                                    <td className="p-4 text-right space-x-2">
+                                                        <button onClick={() => handleEditGuest(g)} className="p-2 bg-slate-800 rounded-lg text-indigo-400"><Icon name="edit-3" className="w-4 h-4"/></button>
+                                                        <button onClick={() => handleDeleteGuest(g.id)} className="p-2 bg-slate-800 rounded-lg text-rose-400"><Icon name="trash-2" className="w-4 h-4"/></button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {tab === 'dispatch' && selectedEvent && (
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <h2 className="text-3xl font-black">Dispatch Center</h2>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="md:col-span-2 space-y-2 max-h-[600px] overflow-y-auto pr-2">
+                                        {guests.length > 0 && (
+                                            <div className="flex items-center gap-3 p-4 bg-slate-900/50 rounded-xl border border-slate-700 mb-2 sticky top-0 z-10 backdrop-blur-md">
+                                                <input type="checkbox" checked={selectedGuests.length === guests.length && guests.length > 0} onChange={toggleSelectAll} className="w-5 h-5 accent-indigo-500 cursor-pointer" />
+                                                <span className="font-bold text-sm cursor-pointer" onClick={toggleSelectAll}>Select All ({selectedGuests.length}/{guests.length})</span>
+                                            </div>
+                                        )}
+                                        {guests.map(g => (
+                                            <div key={g.id} onClick={() => toggleGuestSelection(g.id)} className={`p-4 rounded-xl border cursor-pointer flex justify-between items-center transition-all ${selectedGuests.includes(g.id) ? 'border-indigo-500 bg-indigo-500/10' : 'glass border-white/5'}`}>
+                                                <div className="flex items-center gap-3">
+                                                    <input type="checkbox" checked={selectedGuests.includes(g.id)} readOnly className="w-4 h-4 accent-indigo-500" />
+                                                    <div>
+                                                        <div className="font-bold text-white">{g.name}</div>
+                                                        <div className="text-xs text-slate-400">{g.phone} • {g.channel}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="glass p-6 rounded-2xl h-fit space-y-4 sticky top-24">
+                                        <div className="text-center p-4 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
+                                            <div className="text-3xl font-black text-indigo-400">{selectedGuests.length}</div>
+                                            <div className="text-xs text-slate-400 uppercase font-bold">Selected</div>
+                                        </div>
+                                        <button disabled={selectedGuests.length === 0} onClick={() => openComposer('invite')} className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 py-3 rounded-xl font-bold flex items-center justify-center gap-2">
+                                            <Icon name="send" className="w-4 h-4"/> Draft & Send Invites
+                                        </button>
+                                        <button disabled={selectedGuests.length === 0} onClick={() => openComposer('reminder')} className="w-full bg-amber-600 hover:bg-amber-500 disabled:opacity-50 py-3 rounded-xl font-bold flex items-center justify-center gap-2">
+                                            <Icon name="bell" className="w-4 h-4"/> Draft & Send Reminders
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {tab === 'scanner' && (
+                            <div className="max-w-md mx-auto text-center space-y-6">
+                                <h2 className="text-3xl font-black">Live Scanner</h2>
+                                <div className="glass p-6 rounded-3xl">
+                                    {!scannerActive && <button onClick={() => setScannerActive(true)} className="w-full bg-emerald-600 py-4 rounded-xl font-black mb-4">Start Camera</button>}
+                                    <div id="qr-reader" className={`w-full rounded-xl overflow-hidden ${scannerActive ? 'block' : 'hidden'}`}></div>
+                                    {scannerActive && <button onClick={() => setScannerActive(false)} className="w-full bg-rose-600 py-4 rounded-xl font-black mt-4">Stop Camera</button>}
+                                    {scanResult && (
+                                        <div className={`mt-4 p-4 rounded-xl font-bold ${scanResult.success ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                                            {scanResult.success ? `Granted: ${scanResult.guest.name}` : scanResult.message}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {tab === 'users' && isSuperAdmin && (
+                            <div className="space-y-6">
+                                <div className="flex justify-between items-center">
+                                    <h2 className="text-3xl font-black">System Accounts</h2>
+                                    <button onClick={() => setShowUserModal(true)} className="bg-amber-600 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-amber-500">
+                                        <Icon name="user-plus" className="w-4 h-4"/> Create Account
+                                    </button>
+                                </div>
+                                <div className="glass rounded-2xl overflow-hidden">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-slate-800/50 text-slate-400 text-xs uppercase">
+                                            <tr><th className="p-4">Name</th><th className="p-4">Email</th><th className="p-4">Role</th></tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-800">
+                                            {users.map(u => (
+                                                <tr key={u.id}>
+                                                    <td className="p-4 font-bold">{u.name}</td>
+                                                    <td className="p-4">{u.email}</td>
+                                                    <td className="p-4">
+                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${u.role === 'admin' ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                                                            {u.role.toUpperCase()}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+
+                    {/* --- ALL MODALS (Composer, Event, Guest, Import, User) --- */}
+                    {/* (Paste your existing modals here. They remain unchanged) */}
+
+                    {/* COMPOSER MODAL */}
+                    {showComposerModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                            <div className="glass w-full max-w-2xl p-8 rounded-3xl shadow-2xl">
+                                <h3 className="text-2xl font-black mb-2">{composerType === 'invite' ? 'Draft Invitation' : 'Draft Reminder'}</h3>
+                                <p className="text-sm text-slate-400 mb-4">Sending to {selectedGuests.length} guests.</p>
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                    <span className="text-xs text-slate-400 py-1">Insert:</span>
+                                    {['{name}', '{event_title}', '{date}', '{time}', '{location}', '{hash}'].map(tag => (
+                                        <button key={tag} onClick={() => setDraftMessage(prev => prev + ' ' + tag)} className="text-xs bg-slate-800 border border-slate-700 text-indigo-300 px-2 py-1 rounded-md hover:bg-slate-700">{tag}</button>
+                                    ))}
+                                </div>
+                                <textarea value={draftMessage} onChange={e => setDraftMessage(e.target.value)} rows="6" className="w-full bg-slate-900/80 p-4 rounded-xl border border-slate-700 text-white outline-none focus:border-indigo-500 font-mono text-sm leading-relaxed" />
+                                <div className="flex justify-end gap-3 mt-6">
+                                    <button onClick={() => setShowComposerModal(false)} className="px-6 py-2.5 bg-slate-800 rounded-xl font-bold hover:bg-slate-700">Cancel</button>
+                                    <button onClick={handleSendDispatch} className="px-6 py-2.5 bg-indigo-600 rounded-xl font-bold hover:bg-indigo-500 flex items-center gap-2"><Icon name="send" className="w-4 h-4"/> Confirm & Send</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {showEventModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                            <div className="glass w-full max-w-lg p-8 rounded-3xl shadow-2xl">
+                                <h3 className="text-2xl font-black mb-6">{editEventId ? 'Edit Event' : 'Create Event'}</h3>
+                                <form onSubmit={handleSaveEvent} className="space-y-4">
+                                    <input required type="text" value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} placeholder="Event Title" className="w-full bg-slate-900/50 p-3 rounded-xl border border-slate-700 text-white" />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <input required type="date" value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} className="w-full bg-slate-900/50 p-3 rounded-xl border border-slate-700 text-white" />
+                                        <input required type="time" value={newEvent.time} onChange={e => setNewEvent({...newEvent, time: e.target.value})} className="w-full bg-slate-900/50 p-3 rounded-xl border border-slate-700 text-white" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <input required type="text" value={newEvent.location} onChange={e => setNewEvent({...newEvent, location: e.target.value})} placeholder="Venue" className="w-full bg-slate-900/50 p-3 rounded-xl border border-slate-700 text-white" />
+                                        <input type="text" value={newEvent.hall} onChange={e => setNewEvent({...newEvent, hall: e.target.value})} placeholder="Hall" className="w-full bg-slate-900/50 p-3 rounded-xl border border-slate-700 text-white" />
+                                    </div>
+                                    <input required type="text" value={newEvent.host} onChange={e => setNewEvent({...newEvent, host: e.target.value})} placeholder="Host Name" className="w-full bg-slate-900/50 p-3 rounded-xl border border-slate-700 text-white" />
+                                    <div>
+                                        <label className="text-xs text-slate-400 font-bold block mb-1">Upload Card (JPG/PNG)</label>
+                                        <input type="file" accept="image/*" onChange={e => setEventImage(e.target.files[0])} className="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-indigo-600 file:text-white" />
+                                    </div>
+                                    <div className="flex gap-2 mt-6">
+                                        <button type="button" onClick={() => setShowEventModal(false)} className="flex-1 bg-slate-800 py-3 rounded-xl font-bold">Cancel</button>
+                                        <button type="submit" className="flex-1 bg-indigo-600 py-3 rounded-xl font-bold">Save Event</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {showGuestModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                            <div className="glass w-full max-w-md p-8 rounded-3xl shadow-2xl">
+                                <h3 className="text-2xl font-black mb-6">{editGuestId ? 'Edit Guest' : 'Add Guest'}</h3>
+                                <form onSubmit={handleSaveGuest} className="space-y-4">
+                                    <input required type="text" value={newGuest.name} onChange={e => setNewGuest({...newGuest, name: e.target.value})} placeholder="Full Name" className="w-full bg-slate-900/50 p-3 rounded-xl border border-slate-700 text-white" />
+                                    <input required type="text" value={newGuest.phone} onChange={e => setNewGuest({...newGuest, phone: e.target.value})} placeholder="Phone (+123...)" className="w-full bg-slate-900/50 p-3 rounded-xl border border-slate-700 text-white" />
+                                    <select value={newGuest.channel} onChange={e => setNewGuest({...newGuest, channel: e.target.value})} className="w-full bg-slate-900/50 p-3 rounded-xl border border-slate-700 text-white">
+                                        <option value="whatsapp">WhatsApp</option>
+                                        <option value="sms">SMS</option>
+                                    </select>
+                                    <div className="flex gap-2 mt-6">
+                                        <button type="button" onClick={() => setShowGuestModal(false)} className="flex-1 bg-slate-800 py-3 rounded-xl font-bold">Cancel</button>
+                                        <button type="submit" className="flex-1 bg-indigo-600 py-3 rounded-xl font-bold">Save Guest</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {showImportModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                            <div className="glass w-full max-w-md p-8 rounded-3xl shadow-2xl text-center">
+                                <Icon name="file-spreadsheet" className="w-12 h-12 text-emerald-400 mx-auto mb-4" />
+                                <h3 className="text-2xl font-black mb-2">Bulk Import</h3>
+                                <p className="text-slate-400 text-sm mb-6">Upload CSV: <strong>Name</strong>, <strong>Phone</strong>, <strong>Channel</strong>.</p>
+                                <div className="flex flex-col gap-4">
+                                    <label className="block border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-xl p-6 cursor-pointer">
+                                        <span className="text-indigo-400 font-bold">Click to select CSV file</span>
+                                        <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
+                                    </label>
+                                    <button onClick={downloadTemplate} className="flex items-center justify-center gap-2 text-sm text-slate-400 hover:text-white">
+                                        <Icon name="download" className="w-4 h-4"/> Download CSV Template
+                                    </button>
+                                </div>
+                                <button onClick={() => setShowImportModal(false)} className="mt-6 text-slate-400 hover:text-white w-full">Cancel</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {showUserModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                            <div className="glass w-full max-w-md p-8 rounded-3xl shadow-2xl">
+                                <h3 className="text-2xl font-black mb-6">Create New Account</h3>
+                                <form onSubmit={handleCreateUser} className="space-y-4">
+                                    <input required type="text" value={newUser.name} onChange={e => setNewUser({...newUser, name: e.target.value})} placeholder="Full Name" className="w-full bg-slate-900/50 p-3 rounded-xl border border-slate-700 text-white" />
+                                    <input required type="email" value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} placeholder="Email Address" className="w-full bg-slate-900/50 p-3 rounded-xl border border-slate-700 text-white" />
+                                    <input required type="text" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} placeholder="Temporary Password" className="w-full bg-slate-900/50 p-3 rounded-xl border border-slate-700 text-white" />
+                                    <select value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value})} className="w-full bg-slate-900/50 p-3 rounded-xl border border-slate-700 text-white font-bold">
+                                        <option value="admin">Admin (Full Access)</option>
+                                        <option value="verifier">Verifier (Scanner Only)</option>
+                                    </select>
+                                    <div className="flex gap-2 mt-6">
+                                        <button type="button" onClick={() => setShowUserModal(false)} className="flex-1 bg-slate-800 py-3 rounded-xl font-bold">Cancel</button>
+                                        <button type="submit" className="flex-1 bg-amber-600 py-3 rounded-xl font-bold">Create Account</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+    {% endraw %}
+</body>
+</html>
